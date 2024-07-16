@@ -7,55 +7,71 @@ output: html_document
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
-```
-
-## setup and load data
-```{r}
 library(tidyverse)
 ```
 
-
-
-## score information
-
+Currently, focus analysis when using review submission deadline. Changing date doesnt -> analysis to change substantially. 
 ```{r}
-library(ggplot2)
-
-# Assuming df_arx is your dataframe
-
-# Plot with density plot
-ggplot(df_arx, aes(x = score, color = submitted_comp)) +
-  geom_density() +
-  scale_color_manual(values = c("before" = "darkgreen", "after" = "hotpink"),
-                     breaks = c("before", "after"),
-                     labels = c("2017", "2018")) +
-  labs(color = "Submitted Year")
-
-# Plot with boxplot
-ggplot(df_arx, aes(x = score, color = submitted_comp)) +
-  geom_boxplot() +
-  scale_color_manual(values = c("before" = "darkgreen", "after" = "hotpink"),
-                     breaks = c("before", "after"),
-                     labels = c("2017", "2018")) +
-  labs(color = "Submitted Year")
-
+folder = "reviewer_"
+reviewer_all_2017_found_2018 = read.csv(paste0("data/", folder, "all_2017_found_2018/df_submission_rating.csv"))
+reviewer_all_2017_2018 = read.csv(paste0("data/", folder, "all_2017_2018/df_submission_rating.csv"))
+reviewer_all_2018 = read.csv(paste0("data/", folder, "all_2018/df_submission_rating.csv"))
+reviewer_found_2018 = read.csv(paste0("data/", folder, "found_2018/df_submission_rating.csv"))
 ```
 
 
-Red line is double blind, blue line is single blind. Initially, looks like at least correlational support of claim about higher scores with single blind.
-```{r}
-df |> ggplot(aes(x = AVG_rating, color = as.factor(conf_year))) +
-  geom_density() +
-  scale_color_manual(values = c("2017" = "darkgreen", "2018" = "hotpink"))
+### found 2018
 
-df |> ggplot(aes(x = AVG_rating, color = as.factor(conf_year))) +
-  geom_boxplot() +
-  scale_color_manual(values = c("2017" = "darkgreen", "2018" = "hotpink"))
+```{r}
+# Recode conf_year column
+reviewer_found_2018 <- reviewer_found_2018 %>%
+  mutate(sub_type = recode(as.factor(conf_year),
+                            `0` = "iclr2017",
+                            `1` = "NA_2018",
+                            `2017` = "single blind",
+                            `2018` = "double blind"))
+
 ```
 
-Interesting idea: 
+```{r}
+reviewer_found_2018 |>
+  filter(sub_type != "iclr2017") |>
+  filter(sub_type != "NA_2018") |>
+  ggplot(aes(x = AVG_rating, color = sub_type)) +
+  geom_density()
 
-- get some sort of degree of author success (ie h-index or citations...); look at max author success on a given paper. examine differences
-- this information could probably be scraped from google scholar. 
-- issues of note: some papers no author has clickable profile. also, differing email addressses. 
+reviewer_found_2018 |>
+  filter(sub_type != "iclr2017") |>
+  filter(sub_type != "NA_2018") |>
+  ggplot(aes(x = AVG_rating, color = sub_type)) +
+  geom_boxplot()
+```
 
+
+### all 2018
+
+```{r}
+# Recode conf_year column
+reviewer_all_2018 <- reviewer_all_2018 %>%
+  mutate(sub_type = recode(as.factor(conf_year),
+                            `0` = "iclr2017",
+                            `1` = "NA_2018",
+                            `2017` = "single blind",
+                            `2018` = "double blind"))
+
+```
+
+```{r}
+reviewer_all_2018 |>
+  filter(sub_type != "iclr2017") |>
+  ggplot(aes(x = AVG_rating, color = sub_type)) +
+  geom_density()
+
+reviewer_all_2018 |>
+  filter(sub_type != "iclr2017") |>
+  ggplot(aes(x = AVG_rating, color = sub_type)) +
+  geom_boxplot()
+```
+
+
+Clearly, something very strange is going on with these documents that are not found in the original arxiv search. 
