@@ -1,0 +1,61 @@
+---
+title: "analysis"
+author: "marie"
+date: "2024-06-26"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## setup and load data
+```{r}
+library(tidyverse)
+```
+
+
+
+## score information
+
+```{r}
+library(ggplot2)
+
+# Assuming df_arx is your dataframe
+
+# Plot with density plot
+ggplot(df_arx, aes(x = score, color = submitted_comp)) +
+  geom_density() +
+  scale_color_manual(values = c("before" = "darkgreen", "after" = "hotpink"),
+                     breaks = c("before", "after"),
+                     labels = c("2017", "2018")) +
+  labs(color = "Submitted Year")
+
+# Plot with boxplot
+ggplot(df_arx, aes(x = score, color = submitted_comp)) +
+  geom_boxplot() +
+  scale_color_manual(values = c("before" = "darkgreen", "after" = "hotpink"),
+                     breaks = c("before", "after"),
+                     labels = c("2017", "2018")) +
+  labs(color = "Submitted Year")
+
+```
+
+
+Red line is double blind, blue line is single blind. Initially, looks like at least correlational support of claim about higher scores with single blind.
+```{r}
+df |> ggplot(aes(x = AVG_rating, color = as.factor(conf_year))) +
+  geom_density() +
+  scale_color_manual(values = c("2017" = "darkgreen", "2018" = "hotpink"))
+
+df |> ggplot(aes(x = AVG_rating, color = as.factor(conf_year))) +
+  geom_boxplot() +
+  scale_color_manual(values = c("2017" = "darkgreen", "2018" = "hotpink"))
+```
+
+Interesting idea: 
+
+- get some sort of degree of author success (ie h-index or citations...); look at max author success on a given paper. examine differences
+- this information could probably be scraped from google scholar. 
+- issues of note: some papers no author has clickable profile. also, differing email addressses. 
+

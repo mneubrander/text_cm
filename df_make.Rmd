@@ -24,8 +24,8 @@ Set the date that we want to use as the before/after marker for single vs. doubl
 Options are:
 
 - Nov. 28, 2017 : reviewer initial deadline
-- Jan. 9, 2018 : rebuttal period
-- Jan. 29, 2018 : decision
+- Jan. 6, 2018 : rebuttal period
+- Jan. 30, 2018 : decision
 
 Change both target date and folder name to write correct dataset. 
 
@@ -35,7 +35,7 @@ This RMD has been run three times, once each using the appropriate date.
 
 ```{r}
 target_date <- as.POSIXct("2017-11-28 00:00:00")
-folder = "reviewer_"
+folder = "decision_"
 
 df2018$submitted_comp <- ifelse(
   is.na(df2018$submitted_date), "na", if_else(
@@ -190,7 +190,7 @@ write.csv(df, path, row.names = FALSE)
 ### Check datasets
 
 ```{r}
-df_test = read.csv("data/reviewer_all_2017_found_2018/df_submission_rating.csv", header = T)
+df_test = read.csv("data/reviewer_all_2017_2018/df_submission_rating.csv", header = T)
 ```
 
 ```{r}
