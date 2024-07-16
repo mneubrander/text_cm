@@ -1,0 +1,221 @@
+---
+title: "data_clean_R2"
+author: "marie"
+date: "2024-06-17"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# setup
+
+load packages and read data
+
+```{r}
+library(tidyverse)
+library(aRxiv)
+
+df = read.csv("data/original/df_submission_rating.csv", header = T)
+df2018 = df[df$conf_year == 2018,]
+```
+
+# Perform scraping - search for each title in ArXiV!!
+
+create search title queries
+```{r}
+df2018$query_title = trimws(df2018$title)
+df2018$query_title = gsub('[[:punct:] ]+', " ", df2018$title)
+```
+
+## make what will eventually be results dataframe
+```{r}
+df_results_2 = data
+df_results_2 = data.frame(title = df2018$title, 
+                        authors = df2018$authors,
+                        matched_title = NA,
+                        matched_author = NA,
+                        submitted = NA,
+                        updated = NA, 
+                        score = df2018$AVG_rating,
+                        num_reviews = df2018$NUM_Reviews,
+                        id = df2018$id
+                        )
+
+df_results_2$arx_id = NA
+df_results_2$arx_id_match = NA
+
+#this identifies match type
+df_results_2$match_type = "automatic"
+```
+
+## function definitions
+```{r}
+# Function to clean strings
+clean_string <- function(string) {
+  # Remove punctuation
+  string <- str_replace_all(string, "[[:punct:]]", "")
+  # Remove whitespace
+  string <- str_replace_all(string, "\\s+", "")
+  # Convert to lower case
+  string <- tolower(string)
+  return(string)
+}
+
+# Function to search and match titles using arxiv api
+# this does exact title match; should ignore punctuation, but we get weird results
+search_and_match <- function(title) {
+    search_results <- arxiv_search(query = paste0("ti:\"", title, "\""))
+    search_results$title <- gsub("\n ", "", search_results$title)
+    exact_matches <- search_results[clean_string(search_results$title) == clean_string(title), ]
+    return(exact_matches)
+}
+
+
+contains_punctuation <- function(text) {
+  return(grepl("[[:punct:]]", text))
+}
+```
+
+
+## perform initial scraping
+```{r}
+for (i in 890:nrow(df2018)){
+ 
+  exact_title <- df2018$query_title[i]
+  test_title = df2018$title[i]
+  
+  # Search and attempt to match with the title, stripped of punctuation
+  exact_matches <- search_and_match(exact_title)
+  
+  # If exact match is not found and title contains punctuation
+  # this helps navigate some weird punctuation errors in search 
+  # sometimes punctuation is needed, sometimes it is not
+  if (nrow(exact_matches) == 0 && contains_punctuation(test_title)) {
+    exact_matches <- search_and_match(test_title)
+  }
+  
+  # If an exact match is found, store results
+  if (nrow(exact_matches) == 1) {
+    df_results_2$matched_title[i] <- exact_matches$title
+    df_results_2$matched_author[i] <- exact_matches$authors
+    df_results_2$submitted[i] <- exact_matches$submitted
+    df_results_2$updated[i] <- exact_matches$updated
+    df_results_2$arx_id_match[i] <- exact_matches$id
+  }
+  
+  print(i)
+  print(test_title)
+  print(nrow(exact_matches))
+  print("---------")
+}
+  
+
+```
+
+
+```{r}
+not_found_r2 = df_results_2[is.na(df_results_2$matched_title),]
+found_r2 = df_results_2[!is.na(df_results_2$matched_title),]
+
+not_found_r2.idx = as.numeric(rownames(not_found_r2))
+```
+
+# add any manual matches 
+The manual matches are found by hand by searching arxiv's website. 
+Currently, I only include exact matches that were not found due to weird punctuation issues. Going forward, I want to include other misc. titles that are more of a fuzzy match. 
+
+Eventually, it would be nice for this to be done with a fuzzy search/scraping. This is currently sufficient for data exploration purposes.
+
+```{r}
+#load in manual match csv
+manual_data = read.csv("manual_match.csv", header = T, colClasses = c("character", "character"))
+manual_data$id = as.character(manual_data$id)
+```
+
+```{r}
+for(j in 1:nrow(manual_data)){
+  i = as.integer(manual_data$rowname[j])
+  search_results_id = arxiv_search(query = paste("id:", manual_data$id[j], sep = ""))
+  df_results_2$matched_title[i] <- search_results_id$title
+  df_results_2$matched_author[i] <- search_results_id$authors
+  df_results_2$submitted[i] <- search_results_id$submitted
+  df_results_2$updated[i] <- search_results_id$updated
+  df_results_2$match_type[i] <- manual_data$type[j]
+  df_results_2$arx_id[i] <- manual_data$id[j]
+  df_results_2$arx_id_match[i] <- search_results_id$id
+}
+```
+
+
+# save CSV
+
+```{r}
+write.csv(df_results_2, "arxiv_results_2018.csv", row.names = FALSE)
+```
+
+
+
+
+
+
+
+
+
+
+
+
+GET RID OF STUFF BELOW??
+
+
+
+```{r}
+not_found = df_arx[is.na(df_arx$matched_title),]
+rn_nf = as.numeric(row.names(not_found))
+not_found$ab = NA
+```
+
+```{r}
+for(j in 1:nrow(not_found)){
+  id = not_found$id[j]
+  abstract <- df[df$id == id, "abstract"]
+  not_found$ab[j] = abstract
+}
+```
+
+```{r}
+write.csv(not_found, "not_found.csv", row.names = TRUE)
+```
+
+
+
+
+
+## add date information
+
+```{r}
+df_results_2$submitted_date <- as.POSIXct(df_results$submitted, format="%Y-%m-%d %H:%M:%S")
+df_results_2$submitted_comp = NA
+```
+
+
+```{r}
+target_date <- as.POSIXct("2017-11-27 00:00:00")
+```
+
+
+```{r}
+df_results_2$submitted_comp <- ifelse(
+  is.na(df_results_2$submitted_date), 
+  "after",
+  if_else(
+  df_results_2$submitted_date < target_date, 
+  "before", 
+  ifelse(df_results_2$submitted_date == target_date, 
+         "on", 
+         "after")
+  )
+)
+```
+

@@ -1,0 +1,199 @@
+---
+title: "Data set creation"
+author: "marie"
+date: "2024-06-27"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+```
+
+Now that we have found the articles in arxiv, we want to re-sort the documents into double and single blind
+```{r}
+df = read.csv("data/original/df_submission_rating.csv", header = T)
+df2018 = read.csv("arxiv_results_2018.csv", header = T)
+
+#ensure correct formatting of date
+df2018$submitted_date <- as.POSIXct(df2018$submitted, format="%Y-%m-%d %H:%M:%S")
+```
+
+Set the date that we want to use as the before/after marker for single vs. double blind. 
+
+Options are:
+
+- Nov. 28, 2017 : reviewer initial deadline
+- Jan. 9, 2018 : rebuttal period
+- Jan. 29, 2018 : decision
+
+Change both target date and folder name to write correct dataset. 
+
+Submitted comp will included whether the date submitted to arxiv was before (single blind) or after (double blind) the indicated date. NA indicates that entry was not found in ArXiV. 
+
+This RMD has been run three times, once each using the appropriate date. 
+
+```{r}
+target_date <- as.POSIXct("2017-11-28 00:00:00")
+folder = "reviewer_"
+
+df2018$submitted_comp <- ifelse(
+  is.na(df2018$submitted_date), "na", if_else(
+    df2018$submitted_date < target_date, "before", ifelse(
+      df2018$submitted_date == target_date,  "on",  "after")
+  )
+)
+```
+
+```{r}
+df2018 |> group_by(submitted_comp) |>
+  summarise(count = n(), 
+            score = mean(score)) 
+```
+
+Look at scores of data in three categories. 
+
+```{r}
+df2018 |> ggplot(aes(x = score, color = submitted_comp)) +
+  geom_density()
+```
+
+We see something weird - the scores of entries not found on arxiv are overall notably lower than both categories of those that are found. 
+
+# Data set creation
+
+Below, conf_year has vaues 2017 as a proxy for single blind; 2018 is a proxy for double blind.  
+We will create a new column iclr_year to preserve the original (true) year.
+
+```{r}
+df$iclr_year = df$conf_year
+```
+
+## 2018 ONLY : all rows
+
+This dataset (all_2018) looks only at papers submitted to ICLR2018. Papers submitted to ICLR2017 have conf_year set to 0. 
+
+```{r}
+df <- df %>%
+  mutate(conf_year = ifelse(iclr_year == 2017, 0, conf_year))
+```
+
+
+```{r}
+# Merge df and df2018 to get submitted_comp for iclr_year 2018
+df <- df %>%
+  left_join(df2018 %>% select(id, submitted_comp), by = "id") %>%
+  mutate(conf_year = ifelse(iclr_year == 2018, submitted_comp, conf_year)) %>%
+  select(-submitted_comp) |> # Remove the column if it's no longer needed 
+  mutate(conf_year = case_when(
+    conf_year == "after" ~ "2018",
+    conf_year == "before" ~ "2017",
+    conf_year == "na" ~ "2018",
+    TRUE ~ conf_year  # keep the original value if no match
+  ))
+```
+
+```{r}
+df |> group_by(conf_year) |>summarise(n = n())
+```
+
+```{r}
+path = paste0("data/", folder, "all_2018/df_submission_rating.csv")
+write.csv(df, path, row.names = FALSE)
+```
+
+
+## 2018 ONLY : only rows found on arxiv
+
+This dataset (found_2018) looks only at papers submitted to ICLR2018 AND found on ArXiV. 
+
+Papers submitted to ICLR2017 have conf_year set to 0. 
+Papers submitted to ICLR2018 but not found on ArXiV have conf_year set to 1.
+
+```{r}
+#ids of rows not matched in the arxiv search
+id_list <- df2018 %>%
+  filter(is.na(matched_title)) %>%
+  select(id) %>%
+  pull()
+```
+
+```{r}
+df$conf_year[df$id %in% id_list] <- 1
+```
+
+```{r}
+path = paste0("data/", folder, "found_2018/df_submission_rating.csv")
+write.csv(df, path, row.names = FALSE)
+```
+
+
+## 2018 and 2017 : all
+
+This data set (all_2017_2018) is the same as all_2018 but includes the original ICLR2017 submissions
+
+```{r}
+#clean start on df
+df = read.csv("data/original/df_submission_rating.csv", header = T)
+```
+
+```{r}
+df$iclr_year = df$conf_year
+```
+
+```{r}
+# Merge df and df2018 to get submitted_comp for iclr_year 2018
+df <- df %>%
+  left_join(df2018 %>% select(id, submitted_comp), by = "id") %>%
+  mutate(conf_year = ifelse(iclr_year == 2018, submitted_comp, conf_year)) %>%
+  select(-submitted_comp) |> # Remove the column if it's no longer needed 
+  mutate(conf_year = case_when(
+    conf_year == "after" ~ "2018",
+    conf_year == "before" ~ "2017",
+    conf_year == "na" ~ "2018",
+    TRUE ~ conf_year  # keep the original value if no match
+  ))
+```
+
+
+
+
+```{r}
+path = paste0("data/", folder, "all_2017_2018/df_submission_rating.csv")
+write.csv(df, path, row.names = FALSE)
+```
+
+## 2018 and 2017 : only keeping 2018 rows that were found
+
+This data set (all_2017_found_2018) is the same as found_2018 but includes the original ICLR2017 submissions
+
+
+```{r}
+#ids of rows not matched in the arxiv search
+id_list <- df2018 %>%
+  filter(is.na(matched_title)) %>%
+  select(id) %>%
+  pull()
+```
+
+```{r}
+df$conf_year[df$id %in% id_list] <- 1
+```
+
+```{r}
+path = paste0("data/", folder, "all_2017_found_2018/df_submission_rating.csv")
+write.csv(df, path, row.names = FALSE)
+```
+
+
+
+### Check datasets
+
+```{r}
+df_test = read.csv("data/reviewer_all_2017_found_2018/df_submission_rating.csv", header = T)
+```
+
+```{r}
+df_test |> group_by(conf_year) |>
+  summarise(count = n()) 
+```
