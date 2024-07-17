@@ -13,7 +13,7 @@ library(tidyverse)
 Now that we have found the articles in arxiv, we want to re-sort the documents into double and single blind
 ```{r}
 df = read.csv("data/original/df_submission_rating.csv", header = T)
-df2018 = read.csv("arxiv_results_2018.csv", header = T)
+df2018 = read.csv("data/arxiv_results_2018.csv", header = T)
 
 #ensure correct formatting of date
 df2018$submitted_date <- as.POSIXct(df2018$submitted, format="%Y-%m-%d %H:%M:%S")

@@ -130,7 +130,7 @@ Eventually, it would be nice for this to be done with a fuzzy search/scraping. T
 
 ```{r}
 #load in manual match csv
-manual_data = read.csv("manual_match.csv", header = T, colClasses = c("character", "character"))
+manual_data = read.csv("data/manual_match.csv", header = T, colClasses = c("character", "character"))
 manual_data$id = as.character(manual_data$id)
 ```
 
@@ -152,5 +152,10 @@ for(j in 1:nrow(manual_data)){
 # save CSV
 
 ```{r}
-write.csv(df_results_2, "arxiv_results_2018.csv", row.names = FALSE)
+write.csv(df_results_2, "data/arxiv_results_2018.csv", row.names = FALSE)
 ```
+
+```{r}
+
+```
+
