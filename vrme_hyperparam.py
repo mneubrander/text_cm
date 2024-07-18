@@ -74,7 +74,7 @@ def find_max_cosine(df_embeddings_2017, df_embeddings_2018, clustering, df_submi
             input_row['sample_number_2017'] = sample_number_from_2017
             input_row['cosine_distance'] = tuning_param_cos_dist
             data.append(input_row)
-        # Find the smallest cosine_distance for sample_number_2017 == 490
+        # Find the smallest cosine_distance for sample_number_2017 == all of the 2017 rows
         distances = [entry['cosine_distance'] for entry in data if entry['sample_number_2017'] == df_embeddings_2017.shape[0]]
 
         if distances:

@@ -1,0 +1,113 @@
+---
+title: "atc results analysis"
+author: "marie"
+date: "2024-07-12"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+```
+
+## R Markdown
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+
+```{r cars}
+results = read.csv("atc_results.csv", header = T)
+results_comp = results
+```
+
+```{r}
+# Create a new dataframe for the 'naive' rows
+colnames(results)[colnames(results) == "vrmeATC"] <- "ATC"
+colnames(results)[colnames(results) == "vrmeLCI"] <- "LCI"
+colnames(results)[colnames(results) == "vrmeUCI"] <- "UCI"
+
+
+naive_rows <- data.frame(
+  embedding = "naive",
+  date = results$date,
+  data = results$data,
+  ATC = results$naiveATC,
+  LCI = results$naiveLCI,
+  UCI = results$naiveUCI
+)
+
+# Select only the necessary columns from the original results
+results_vrme <- results[, c("embedding", "date", "data", "ATC", "LCI", "UCI")]
+
+# Combine the 'naive' rows with the original results (now with renamed VRM-E columns)
+final_results <- rbind(results_vrme, naive_rows)
+
+# Optionally, you may want to order or sort the rows
+#final_results <- final_results[order(final_results$date, final_results$data, final_results$embedding), ]
+```
+```{r}
+# Remove duplicate rows based on the combination of embedding, date, and data columns
+final_results <- final_results |>
+  distinct(embedding, date, data, .keep_all = TRUE) |>
+  mutate(embedding = sub("_.*", "", embedding)) |>
+  mutate(embedding = ifelse(embedding == "df", "specter", embedding))
+  
+head(final_results)
+```
+
+```{r}
+results_reviewer = final_results |> filter(date == "reviewer")
+
+results_reviewer |> ggplot(aes(x = ATC, y = data, color = embedding)) +
+  geom_point() +
+  geom_errorbarh(aes(xmax = UCI, xmin = LCI))  +
+  geom_vline(xintercept = 0, color = "black")
+
+```
+
+
+```{r}
+raw_reviewer_found_2018 = read.csv("data/reviewer_found_2018/df_submission_rating.csv", header = T)
+raw_reviewer_all_2018 = read.csv("data/reviewer_all_2018/df_submission_rating.csv", header = T)
+raw_reviewer_all_2017_found_2018 = read.csv("data/reviewer_all_2017_found_2018/df_submission_rating.csv", header = T)
+raw_reviewer_all_2017_2018 = read.csv("data/reviewer_all_2017_2018/df_submission_rating.csv", header = T)
+
+```
+
+```{r}
+raw_reviewer_all_2018 |> 
+  group_by(conf_year) |>
+  summarise(score = mean(AVG_rating))
+  
+```
+
+
+
+```{r}
+results_rebuttal= final_results |> filter(date == "rebuttal")
+
+results_rebuttal |> ggplot(aes(x = ATC, y = data, color = embedding)) +
+  geom_point() +
+  geom_errorbarh(aes(xmax = UCI, xmin = LCI))  +
+  geom_vline(xintercept = 0, color = "black")
+```
+
+```{r}
+results_decision= final_results |> filter(date == "decision")
+
+results_decision |> ggplot(aes(x = ATC, y = data, color = embedding)) +
+  geom_point() +
+  geom_errorbarh(aes(xmax = UCI, xmin = LCI))  +
+  geom_vline(xintercept = 0, color = "black")
+```
+
+```{r}
+final_results |> ggplot(aes(x = ATC, y = data, color = embedding)) +
+  geom_point() +
+  geom_errorbarh(aes(xmax = UCI, xmin = LCI))  +
+  geom_vline(xintercept = 0, color = "black") +
+  facet_wrap(~date, ncol = 1)
+  
+```
+
