@@ -17,7 +17,7 @@ This is an R Markdown document. Markdown is a simple formatting syntax for autho
 When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
 
 ```{r cars}
-results = read.csv("atc_results.csv", header = T)
+results = read.csv("atc_results2.csv", header = T)
 results_comp = results
 ```
 
@@ -46,6 +46,7 @@ final_results <- rbind(results_vrme, naive_rows)
 # Optionally, you may want to order or sort the rows
 #final_results <- final_results[order(final_results$date, final_results$data, final_results$embedding), ]
 ```
+
 ```{r}
 # Remove duplicate rows based on the combination of embedding, date, and data columns
 final_results <- final_results |>
@@ -57,12 +58,22 @@ head(final_results)
 ```
 
 ```{r}
-results_reviewer = final_results |> filter(date == "reviewer")
+results_reviewer = final_results |> 
+  filter(date == "reviewer"  | date == "original") |>
+  mutate(data = ifelse(data == "remove_missing", "original", data)) |>
+  mutate(estimator = ifelse(embedding == "naive", embedding, paste0("vrm-e ", embedding)))
+  
 
-results_reviewer |> ggplot(aes(x = ATC, y = data, color = embedding)) +
-  geom_point() +
-  geom_errorbarh(aes(xmax = UCI, xmin = LCI))  +
-  geom_vline(xintercept = 0, color = "black")
+plot_results = 
+  results_reviewer |> ggplot(aes(x = ATC, y = data, color = estimator)) +
+  geom_errorbarh(aes(xmax = UCI, xmin = LCI, height = 0.7), linewidth = 0.7)  +
+  geom_point(size = 1.5) +
+  geom_vline(xintercept = 0, color = "black") +
+  labs(y = "Dataset", color = "Estimator") 
+
+plot_results
+
+ggsave("figs/atc.pdf", plot = plot_results)
 
 ```
 

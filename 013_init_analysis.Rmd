@@ -46,6 +46,13 @@ reviewer_found_2018 |>
   ggplot(aes(x = AVG_rating, color = sub_type)) +
   geom_boxplot()
 ```
+```{r}
+reviewer_found_2018 |>
+  filter(sub_type != "iclr2017") |>
+  filter(sub_type != "NA_2018") |>
+  group_by(sub_type) |>
+  summarise(count = n())
+```
 
 
 ### all 2018
@@ -71,6 +78,12 @@ reviewer_all_2018 |>
   filter(sub_type != "iclr2017") |>
   ggplot(aes(x = AVG_rating, color = sub_type)) +
   geom_boxplot()
+
+reviewer_all_2018|>
+  filter(sub_type != "iclr2017") |>
+  filter(sub_type != "NA_2018") |>
+  group_by(sub_type) |>
+  summarise(count = n())
 ```
 
 
