@@ -26,30 +26,47 @@ reviewer_found_2018 = read.csv(paste0("data/", folder, "found_2018/df_submission
 # Recode conf_year column
 reviewer_found_2018 <- reviewer_found_2018 %>%
   mutate(sub_type = recode(as.factor(conf_year),
-                            `0` = "iclr2017",
-                            `1` = "NA_2018",
-                            `2017` = "single blind",
-                            `2018` = "double blind"))
+                            `0` = "ICLR 2017",
+                            `1` = "ICLR 2018 : Not Found",
+                            `2017` = "ICLR 2018 : Single",
+                            `2018` = "ICLR 2018 : Double"))
 
 ```
 
 ```{r}
-reviewer_found_2018 |>
-  filter(sub_type != "iclr2017") |>
-  filter(sub_type != "NA_2018") |>
+dens_scores = reviewer_found_2018 |>
+  #filter(sub_type != "iclr2017") |>
+  #filter(sub_type != "NA_2018") |>
   ggplot(aes(x = AVG_rating, color = sub_type)) +
-  geom_density()
+  geom_density() +
+  labs(color = "Submission Category")+
+  labs(x = "Average Reviewer Rating")
+dens_scores
+ggsave("dens_scores.pdf", plot = dens_scores)
+
+box_scores = reviewer_found_2018 |>
+  #filter(sub_type != "iclr2017") |>
+  #filter(sub_type != "NA_2018") |>
+  ggplot(aes(x = AVG_rating, color = sub_type)) +
+  geom_boxplot() +
+  labs(color = "Submission Category") +
+  labs(x = "Average Reviewer Rating") +
+  theme(axis.text.y=element_blank())+
+  theme(axis.ticks.y=element_blank())
+
+box_scores
+ggsave("boxscores.pdf", plot = box_scores, width=8, height=3, dpi=300)
 
 reviewer_found_2018 |>
   filter(sub_type != "iclr2017") |>
-  filter(sub_type != "NA_2018") |>
-  ggplot(aes(x = AVG_rating, color = sub_type)) +
-  geom_boxplot()
+  #filter(sub_type != "NA_2018") |>
+  group_by(sub_type) |>
+  summarise(count = n())
 ```
 ```{r}
-reviewer_found_2018 |>
+reviewer_all_2018 |>
   filter(sub_type != "iclr2017") |>
-  filter(sub_type != "NA_2018") |>
+  #filter(sub_type != "NA_2018") |>
   group_by(sub_type) |>
   summarise(count = n())
 ```

@@ -15,6 +15,9 @@ Now that we have found the articles in arxiv, we want to re-sort the documents i
 df = read.csv("data/original/df_submission_rating.csv", header = T)
 df2018 = read.csv("data/arxiv_results_2018.csv", header = T)
 
+# Change submitted_date to NA where match_type is "automatic"
+df2018$submitted[df2018$match_type == "manual_title"] <- NA
+
 #ensure correct formatting of date
 df2018$submitted_date <- as.POSIXct(df2018$submitted, format="%Y-%m-%d %H:%M:%S")
 ```
@@ -55,7 +58,7 @@ Look at scores of data in three categories.
 
 ```{r}
 df2018 |> ggplot(aes(x = score, color = submitted_comp)) +
-  geom_density()
+  geom_boxplot()
 ```
 
 We see something weird - the scores of entries not found on arxiv are overall notably lower than both categories of those that are found. 

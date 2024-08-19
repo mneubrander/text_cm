@@ -1,0 +1,288 @@
+---
+title: "test_author"
+author: "marie"
+date: "2024-07-25"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(dplyr)
+library(tidyverse)
+```
+
+```{r}
+#look at reviewer data set
+
+folder = "reviewer_"
+df_author = read.csv(paste0("data/", folder, "found_2018/df_submission_rating.csv"))
+
+df_author <- df_author |>
+  mutate(sub_type = recode(as.factor(conf_year),
+                            `0` = "ICLR 2017",
+                            `1` = "ICLR 2018 : Not Found",
+                            `2017` = "ICLR 2018 : Single",
+                            `2018` = "ICLR 2018 : Double"))
+
+df_author_test = df_author
+
+
+df_author_test$authors_list <- lapply(df_author_test$authorids, function(x) {
+  # Remove the square brackets and split the string by comma
+  author_ids <- unlist(strsplit(gsub("\\[|\\]|\"", "", x), ", "))
+  #print(author_ids)
+  return(author_ids)
+})
+
+# Unlist all authors into a single vector
+all_authors <- unlist(df_author_test$authors_list)
+
+# Count occurrences of each author and filter those with more than one appearance
+author_counts <- data.frame(table(all_authors))
+unique_authors <- author_counts[author_counts$Freq == 1, ]
+multiple_authors <- author_counts[author_counts$Freq > 1, ]
+
+```
+
+
+```{r}
+df_author_2018 = df_author_test[df_author_test$iclr_year == 2018,]
+df_author_2018s = df_author_test[df_author_test$sub_type == "ICLR 2018 : Single",]
+df_author_2018d = df_author_test[df_author_test$sub_type == "ICLR 2018 : Double",]
+df_author_2018na = df_author_test[df_author_test$sub_type == "ICLR 2018 : Not Found",]
+```
+
+#all 2018 authors
+```{r}
+df_author_2018$authors_list <- lapply(df_author_2018$authorids, function(x) {
+  # Remove the square brackets and split the string by comma
+  author_ids <- unlist(strsplit(gsub("\\[|\\]|\"", "", x), ", "))
+  #print(author_ids)
+  return(author_ids)
+})
+
+# Unlist all authors into a single vector
+authors_2018 <- unlist(df_author_2018$authors_list)
+authors_2018_unique = unique(authors_2018)
+
+authors_2018_counts <- data.frame(table(authors_2018))
+
+```
+
+#get list of authors in single blind
+```{r}
+df_author_2018s$authors_list <- lapply(df_author_2018s$authorids, function(x) {
+  # Remove the square brackets and split the string by comma
+  author_ids <- unlist(strsplit(gsub("\\[|\\]|\"", "", x), ", "))
+  #print(author_ids)
+  return(author_ids)
+})
+
+# Unlist all authors into a single vector
+authors_2018s <- unlist(df_author_2018s$authors_list)
+authors_2018s_unique = unique(authors_2018s)
+
+authors_2018s_counts <- data.frame(table(authors_2018s))
+
+
+```
+
+#get list of authors in double blind
+```{r}
+df_author_2018d$authors_list <- lapply(df_author_2018d$authorids, function(x) {
+  # Remove the square brackets and split the string by comma
+  author_ids <- unlist(strsplit(gsub("\\[|\\]|\"", "", x), ", "))
+  #print(author_ids)
+  return(author_ids)
+})
+
+# Unlist all authors into a single vector
+authors_2018d <- unlist(df_author_2018d$authors_list)
+authors_2018d_unique = unique(authors_2018d)
+
+authors_2018d_counts <- data.frame(table(authors_2018d))
+
+```
+
+#get list of authors in not found
+```{r}
+df_author_2018na$authors_list <- lapply(df_author_2018na$authorids, function(x) {
+  # Remove the square brackets and split the string by comma
+  author_ids <- unlist(strsplit(gsub("\\[|\\]|\"", "", x), ", "))
+  #print(author_ids)
+  return(author_ids)
+})
+
+# Unlist all authors into a single vector
+authors_2018na <- unlist(df_author_2018na$authors_list)
+authors_2018na_unique = unique(authors_2018na)
+
+authors_2018na_counts <- data.frame(table(authors_2018na))
+
+```
+
+
+# create overall author info data frame
+
+```{r}
+author_info_2018 = data.frame(author_id = authors_2018_unique)
+author_info_2018$single = 0
+author_info_2018$double = 0
+author_info_2018$na = 0
+author_info_2018$total = 0
+```
+
+
+```{r}
+#change to lapply
+for(i in 1:nrow(author_info_2018)){
+  
+  author = author_info_2018$author_id[i]
+  
+  s = authors_2018s_counts[authors_2018s_counts$authors_2018 == author, "Freq"]
+  d = authors_2018d_counts[authors_2018d_counts$authors_2018 == author, "Freq"]
+  na = authors_2018na_counts[authors_2018na_counts$authors_2018 == author, "Freq"]
+  tot = authors_2018_counts[authors_2018_counts$authors_2018 == author, "Freq"]
+  
+  author_info_2018$single[i] = ifelse(length(s) > 0, s, 0)
+  author_info_2018$double[i] = ifelse(length(d) > 0, d, 0)
+  author_info_2018$na[i] = ifelse(length(na) > 0, na, 0)
+  author_info_2018$total[i] = tot
+  
+}
+```
+
+```{r}
+author_info_2018_na_overlap <- author_info_2018 %>%
+  filter(na > 0, single > 0 | double > 0)
+
+nrow(author_info_2018_na_overlap)
+nrow(author_info_2018)
+```
+
+only 196 out of 2770 authors appeared in both a not found row and a single or double blind row
+
+Now, let's check the author status of the NA papers
+
+```{r}
+df_author_2018na$num_author = 0
+df_author_2018na$num_single = 0
+df_author_2018na$num_double = 0
+```
+
+```{r}
+for (i in 1:nrow(df_author_2018na)) {
+  author_list = unlist(df_author_2018na$authors_list[i])
+  ns = 0
+  nd = 0
+  for (an in 1:length(author_list)) {
+    a = author_list[an]
+    if (a %in% authors_2018s_unique) {ns = ns + 1 }
+    if (a %in% authors_2018d_unique) {nd = nd + 1 }
+  }
+  df_author_2018na$num_author[i] = length(author_list)
+  df_author_2018na$num_single[i] = ns
+  df_author_2018na$num_double[i] = nd
+}
+```
+
+```{r}
+count_na_single <- df_author_2018na %>%
+  filter(num_single > 0 & num_double == 0) %>%
+  summarise(count = n()) %>%
+  pull(count)
+
+count_na_double <- df_author_2018na %>%
+  filter(num_single == 0 & num_double > 0) %>%
+  summarise(count = n()) %>%
+  pull(count)
+
+count_na_double_single <- df_author_2018na %>%
+  filter( num_single > 0 & num_double > 0) %>%
+  summarise(count = n()) %>%
+  pull(count)
+
+count_na_no_overlap <- df_author_2018na %>%
+  filter(num_single  == 0 & num_double == 0) %>%
+  summarise(count = n()) %>%
+  pull(count)
+
+count_na_single
+count_na_double
+count_na_double_single
+count_na_no_overlap
+```
+
+Look at distribution of these categories above!
+```{r}
+
+df_author_2018na <- df_author_2018na %>%
+  mutate(type_of_overlap = case_when(
+    num_single > 0 & num_double == 0 ~ "na_single",
+    num_single == 0 & num_double > 0 ~ "na_double",
+    num_single > 0 & num_double > 0 ~ "na_single_double",
+    num_single == 0 & num_double == 0 ~ "na_no_overlap"
+  ))
+```
+
+
+```{r}
+# Convert type_of_overlap to a factor with the specified order
+df_author_2018na$type_of_overlap <- factor(df_author_2018na$type_of_overlap, 
+                                           levels = c("na_single", "na_double", "na_single_double", "na_no_overlap"))
+
+# Create the boxplot with the specified order
+df_author_2018na_box = df_author_2018na |> 
+  ggplot(aes(x = AVG_rating, color = type_of_overlap)) + 
+  geom_boxplot() +
+  scale_color_manual(values=c("royalblue4", "dodgerblue3", "lightskyblue2", "turquoise4"))+
+  theme(axis.text.y=element_blank())+
+  theme(axis.ticks.y=element_blank()) +
+  labs(color = "Category") 
+
+
+df_author_2018na_box
+ggsave("boxscores_author.pdf", plot = df_author_2018na_box, width=8, height=3, dpi=300)
+
+```
+
+
+what if single overlap is really single?
+
+```{r}
+# Get the ids where type_of_overlap is "na_single"
+ids_na_single <- df_author_2018na$id[df_author_2018na$type_of_overlap == "na_single"]
+
+df_author_update = read.csv(paste0("data/", folder, "found_2018/df_submission_rating.csv"))
+# Update conf_year to 2017 for rows in df with matching ids
+df_author_update$conf_year[df_author_update$id %in% ids_na_single] <- 2017
+```
+
+```{r}
+df_author_update |> group_by(conf_year) |>
+  summarise(count = n())
+```
+
+```{r}
+write.csv(df_author_update, paste0("data/", folder, "found_2018_author/df_submission_rating.csv"))
+```
+
+
+
+```{r}
+# Get the ids where type_of_overlap is "na_single"
+ids_na_single <- df_author_2018na$id[df_author_2018na$type_of_overlap == "na_single"]
+
+df_author_update = read.csv(paste0("data/", folder, "all_2017_2018/df_submission_rating.csv"))
+# Update conf_year to 2017 for rows in df with matching ids
+df_author_update$conf_year[df_author_update$id %in% ids_na_single] <- 2017
+```
+
+```{r}
+df_author_update |> group_by(conf_year) |>
+  summarise(count = n())
+```
+
+```{r}
+write.csv(df_author_update, paste0("data/", folder, "all_2017_2018_author/df_submission_rating.csv"))
+```
